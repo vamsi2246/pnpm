@@ -25,6 +25,8 @@ export function mergeLockfileChanges (ours: LockfileObject, theirs: LockfileObje
 
   for (const importerId of Array.from(new Set([...Object.keys(ours.importers), ...Object.keys(theirs.importers)] as ProjectId[]))) {
     newLockfile.importers[importerId] = {
+      ...ours.importers[importerId],
+      ...theirs.importers[importerId],
       specifiers: {},
     }
     for (const key of ['dependencies', 'devDependencies', 'optionalDependencies'] as const) {
@@ -99,8 +101,13 @@ function mergeVersions (ourValue: string, theirValue: string): string {
   if (!ourValue) return theirValue
   const [ourVersion] = ourValue.split('(')
   const [theirVersion] = theirValue.split('(')
-  if (semver.gt(ourVersion, theirVersion)) {
-    return ourValue
+  try {
+    if (semver.gt(ourVersion, theirVersion)) {
+      return ourValue
+    }
+  } catch {
+    // Non-semver versions (link:, file:, git URLs, etc.) — prefer theirs
+    return theirValue
   }
   return theirValue
 }
